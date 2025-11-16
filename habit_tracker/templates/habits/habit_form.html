@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="max-width: 500px; margin: 0 auto;">
+    <h2 style="margin-bottom: 1.5rem;">
+        {% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Hábito
+    </h2>
+    
+    <div class="card">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 0.5rem;">Nombre del hábito</label>
+                {{ form.name }}
+            </div>
+            
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 0.5rem;">Tipo de meta</label>
+                {{ form.goal_type }}
+            </div>
+            
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 0.5rem;">Valor objetivo</label>
+                {{ form.target }}
+                <small style="color: #ccc; display: block; margin-top: 0.25rem;">
+                    Para metas booleanas, usa 1. Para numéricas/temporales, ingresa el valor objetivo.
+                </small>
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn" style="flex: 1;">Guardar</button>
+                <a href="{% url 'habit_list' %}" class="btn btn-outline">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

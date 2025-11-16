@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 0 auto;">
+    <div class="card">
+        <h3 style="margin-bottom: 1rem; color: #dc3545;">Eliminar Hábito</h3>
+        
+        <p style="margin-bottom: 1.5rem;">
+            ¿Estás seguro de que quieres eliminar el hábito "{{ habit.name }}"?
+            Esta acción no se puede deshacer.
+        </p>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn btn-danger" style="flex: 1;">Eliminar</button>
+                <a href="{% url 'habit_list' %}" class="btn btn-outline">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

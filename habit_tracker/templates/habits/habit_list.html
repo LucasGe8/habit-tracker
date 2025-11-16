@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h2>Mis Hábitos</h2>
+    <a href="{% url 'habit_create' %}" class="btn">+ Nuevo Hábito</a>
+</div>
+
+<div class="habit-grid">
+    {% for habit in habits %}
+    <div class="habit-card {% if habit.today_log and habit.today_log.value >= habit.target %}completed{% endif %}">
+        <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 0.5rem;">
+            <h3 style="flex: 1; margin-right: 1rem;">{{ habit.name }}</h3>
+            <span class="streak">🔥 {{ habit.current_streak }}</span>
+        </div>
+        
+        <div style="margin-bottom: 1rem; font-size: 0.9rem; color: #ccc;">
+            {% if habit.goal_type == 'boolean' %}
+                Meta: Completar diariamente
+            {% else %}
+                Meta: {{ habit.target }} {% if habit.goal_type == 'time' %}minutos{% else %}unidades{% endif %}
+            {% endif %}
+        </div>
+        
+        <div style="display: flex; gap: 0.5rem;">
+            {% if habit.today_log and habit.today_log.value >= habit.target %}
+                <form method="post" action="{% url 'log_habit' habit.id %}" style="flex: 1;">
+                    {% csrf_token %}
+                    <input type="hidden" name="value" value="0">
+                    <button type="submit" class="btn btn-outline" style="width: 100%;">
+                        ✅ Completado
+                    </button>
+                </form>
+            {% else %}
+                {% if habit.goal_type == 'boolean' %}
+                    <form method="post" action="{% url 'log_habit' habit.id %}" style="flex: 1;">
+                        {% csrf_token %}
+                        <input type="hidden" name="value" value="1">
+                        <button type="submit" class="btn" style="width: 100%;">
+                            Marcar Completado
+                        </button>
+                    </form>
+                {% else %}
+                    <form method="post" action="{% url 'log_habit' habit.id %}" style="display: flex; gap: 0.5rem; width: 100%;">
+                        {% csrf_token %}
+                        <input type="number" name="value" class="form-control" placeholder="Valor" 
+                               step="{% if habit.goal_type == 'time' %}1{% else %}0.1{% endif %}" 
+                               style="flex: 2;">
+                        <button type="submit" class="btn" style="flex: 1;">Guardar</button>
+                    </form>
+                {% endif %}
+            {% endif %}
+            
+            <a href="{% url 'habit_edit' habit.id %}" class="btn btn-outline">✏️</a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card" style="text-align: center; padding: 2rem;">
+        <h3>No tienes hábitos registrados</h3>
+        <p style="margin: 1rem 0; color: #ccc;">Comienza creando tu primer hábito</p>
+        <a href="{% url 'habit_create' %}" class="btn">Crear Primer Hábito</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

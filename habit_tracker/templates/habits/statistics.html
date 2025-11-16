@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 style="margin-bottom: 1.5rem;">Estadísticas</h2>
+
+<div class="habit-grid">
+    {% for stat in stats %}
+    <div class="card">
+        <h3 style="margin-bottom: 0.5rem;">{{ stat.habit.name }}</h3>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;">
+            <div style="text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: #007bff;">
+                    {{ stat.current_streak }}
+                </div>
+                <div style="font-size: 0.8rem; color: #ccc;">Racha actual</div>
+            </div>
+            
+            <div style="text-align: center;">
+                <div style="font-size: 2rem; font-weight: bold; color: #28a745;">
+                    {{ stat.completion_rate }}%
+                </div>
+                <div style="font-size: 0.8rem; color: #ccc;">Tasa de éxito</div>
+            </div>
+        </div>
+        
+        <div style="background-color: #2a2a2a; border-radius: 10px; padding: 0.5rem; margin-top: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                <span>Completados: {{ stat.completed }}</span>
+                <span>Total: {{ stat.total_logs }}</span>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card" style="text-align: center; padding: 2rem;">
+        <h3>No hay estadísticas disponibles</h3>
+        <p style="margin: 1rem 0; color: #ccc;">Comienza registrando tus hábitos</p>
+        <a href="{% url 'habit_create' %}" class="btn">Crear Hábito</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
