@@ -8,6 +8,13 @@
     <div class="card">
         <h3 style="margin-bottom: 0.5rem;">{{ stat.habit.name }}</h3>
         
+        <!-- NUEVO: Fecha de creación en estadísticas -->
+        <div style="font-size: 0.8rem; color: #888; margin-bottom: 1rem;">
+            Creado el {{ stat.habit.formatted_created_at }}
+            <span style="color: #007bff; margin-left: 0.5rem;">•</span>
+            <span style="color: #007bff;">{{ stat.habit.get_goal_type_display }}</span>
+        </div>
+        
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;">
             <div style="text-align: center;">
                 <div style="font-size: 2rem; font-weight: bold; color: #007bff;">
