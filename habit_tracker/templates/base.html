@@ -1,8 +1,14 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Favicon / icons -->
+    <link rel="shortcut icon" href="{% static 'images/favicon.png' %}" type="image/x-icon" />
+    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/x-icon" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/favicon.png' %}" />
+    <link rel="manifest" href="{% static 'images/manifest.json' %}" />
     <title>
       {% block title %}
         Habit Tracker
@@ -323,6 +329,72 @@
       .habit-card.completed .progress-bar {
         background: #28a745 !important;
       }
+
+      /* Responsive menu for small screens */
+      .menu-toggle {
+        display: none;
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.08);
+        color: #fff;
+        padding: 0.4rem 0.6rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1.1rem;
+      }
+
+      @media (max-width: 640px) {
+        .nav {
+          flex-direction: row;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .brand {
+          flex: 1;
+        }
+
+        .menu-toggle {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .nav-links {
+          display: none;
+          position: absolute;
+          top: 64px;
+          left: 0;
+          right: 0;
+          background: #0f0f0f;
+          padding: 0.75rem 1rem;
+          border-top: 1px solid #222;
+          flex-direction: column;
+          gap: 0.5rem;
+          z-index: 200;
+        }
+
+        .nav-links.show {
+          display: flex;
+        }
+
+        .nav-links a,
+        .nav-links form {
+          width: 100%;
+        }
+
+        .user-info {
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .user-info .username {
+          font-size: 0.95rem;
+        }
+
+        .container { padding: 12px; }
+      }
     </style>
   </head>
   <body>
@@ -330,15 +402,23 @@
       <div class="container">
         <div class="nav">
           <div class="brand">Habit Tracker</div>
+          <button class="menu-toggle" aria-expanded="false" aria-label="Mostrar menú">☰</button>
           <div class="nav-links">
             {% if user.is_authenticated %}
-              <span style="color: #ccc;">Hola, {{ user.username }}</span>
-              <a href="{% url 'habit_list' %}">Mis Hábitos</a>
-              <a href="{% url 'statistics' %}">Estadísticas</a>
-              <a href="{% url 'logout' %}">Salir</a>
+              <div class="user-info">
+                <span class="username">👤 {{ user.username }}</span>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <a href="{% url 'habit_list' %}" class="btn btn-outline" style="padding: 0.5rem 1rem;">Mis Hábitos</a>
+                  <a href="{% url 'statistics' %}" class="btn btn-outline" style="padding: 0.5rem 1rem;">Estadísticas</a>
+                  <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn" style="background: #6c757d; padding: 0.5rem 1rem;">🚪 Salir</button>
+                  </form>
+                </div>
+              </div>
             {% else %}
-              <a href="{% url 'login' %}">Ingresar</a>
-              <a href="{% url 'register' %}">Registrarse</a>
+              <a href="{% url 'login' %}" class="btn btn-outline">Ingresar</a>
+              <a href="{% url 'register' %}" class="btn">Registrarse</a>
             {% endif %}
           </div>
         </div>
@@ -358,5 +438,20 @@
 
       {% endblock %}
     </div>
+    <script>
+      (function(){
+        const toggle = document.querySelector('.menu-toggle');
+        const links = document.querySelector('.nav-links');
+        if (!toggle || !links) return;
+        toggle.addEventListener('click', () => {
+          const showed = links.classList.toggle('show');
+          toggle.setAttribute('aria-expanded', showed ? 'true' : 'false');
+        });
+        // close on resize to larger screens
+        window.addEventListener('resize', () => {
+          if (window.innerWidth > 640) links.classList.remove('show');
+        });
+      })();
+    </script>
   </body>
 </html>
