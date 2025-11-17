@@ -8,12 +8,12 @@
 
 <div class="habit-grid">
     {% for habit in habits %}
-    <div class="habit-card {% if habit.today_log and habit.today_log.value >= habit.target %}completed{% endif %}">
+    <div class="habit-card {% if habit.today_log and habit.today_log.value >= habit.target %}completed{% endif %}" 
+         id="habit-{{ habit.id }}">
         <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 0.5rem;">
             <h3 style="flex: 1; margin-right: 1rem;">{{ habit.name }}</h3>
             <div style="text-align: right;">
                 <div class="streak">🔥 {{ habit.current_streak }}</div>
-                <!-- Temporizador individual para cada racha -->
                 <div class="individual-timer" data-habit-id="{{ habit.id }}" 
                      style="font-size: 0.7rem; margin-top: 0.2rem; font-family: monospace;">
                     {% if habit.is_completed_today %}
@@ -63,24 +63,53 @@
                         </button>
                     </form>
                 {% else %}
-                    <form method="post" action="{% url 'log_habit' habit.id %}" style="display: flex; gap: 0.5rem; width: 100%;">
-                        {% csrf_token %}
-                        <input type="number" name="value" class="form-control" placeholder="Valor" 
-                               step="{% if habit.goal_type == 'time' %}1{% else %}0.1{% endif %}" 
-                               style="flex: 2;">
-                        <button type="submit" class="btn" style="flex: 1;">Guardar</button>
-                    </form>
+                    <!-- NUEVO: Control para hábitos numéricos/tiempo con botones +/- -->
+                    <div style="display: flex; gap: 0.5rem; width: 100%; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; background: #2a2a2a; border-radius: 8px; padding: 0.5rem;">
+                            <button type="button" class="btn btn-outline decrement-btn" 
+                                    data-habit-id="{{ habit.id }}" 
+                                    style="padding: 0.5rem; min-width: 40px;">-</button>
+                            
+                            <div style="text-align: center; flex: 1;">
+                                <div id="value-{{ habit.id }}" class="habit-value" 
+                                     style="font-size: 1.2rem; font-weight: bold; color: #007bff;">
+                                    {{ habit.today_log.value|default:0|floatformat:0 }}
+                                </div>
+                                <div style="font-size: 0.7rem; color: #888;">
+                                    de {{ habit.target|floatformat:0 }}
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn btn-outline increment-btn" 
+                                    data-habit-id="{{ habit.id }}" 
+                                    style="padding: 0.5rem; min-width: 40px;">+</button>
+                        </div>
+                        
+                        <button type="button" class="btn save-btn" 
+                                data-habit-id="{{ habit.id }}" 
+                                style="flex: 0.5; display: none;">💾</button>
+                    </div>
                 {% endif %}
             {% endif %}
             
             <!-- BOTONES DE ACCIÓN -->
             <div style="display: flex; gap: 0.25rem;">
                 <a href="{% url 'habit_edit' habit.id %}" class="btn btn-outline" style="padding: 0.5rem;">✏️</a>
-                <!-- NUEVO: Botón de eliminar -->
                 <button type="button" class="btn btn-outline" style="padding: 0.5rem; color: #dc3545;" 
                         onclick="confirmDelete({{ habit.id }}, '{{ habit.name|escapejs }}')">🗑️</button>
             </div>
         </div>
+        
+        <!-- Barra de progreso para hábitos numéricos -->
+        {% if habit.goal_type != 'boolean' %}
+        <div style="margin-top: 0.5rem; background: #333; border-radius: 4px; height: 6px; overflow: hidden;">
+            <div id="progress-{{ habit.id }}" class="progress-bar" 
+                 style="height: 100%; background: #007bff; width: 
+                 {% widthratio habit.today_log.value|default:0 habit.target 100 %}%; 
+                 transition: width 0.3s ease;">
+            </div>
+        </div>
+        {% endif %}
     </div>
     {% empty %}
     <div class="card" style="text-align: center; padding: 2rem;">
@@ -93,6 +122,11 @@
 
 <!-- Script para actualizar los temporizadores individuales -->
 <script>
+// Variables globales para almacenar valores temporales y timeouts por hábito
+const habitValues = {};
+const saveTimeouts = {};
+
+// Seguridad en timers individuales
 function updateIndividualTimers() {
     const now = new Date();
     const tomorrow = new Date(now);
@@ -100,51 +134,176 @@ function updateIndividualTimers() {
     tomorrow.setHours(0, 0, 0, 0);
     
     const timeLeft = tomorrow - now;
-    
     const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
     
-    // Actualizar todos los temporizadores individuales
     const timerElements = document.querySelectorAll('.individual-timer');
     
     timerElements.forEach(timer => {
-        // Solo actualizar si no está marcado como completado
-        if (!timer.querySelector('span').textContent.includes('completado')) {
-            let color = '#28a745'; // Verde por defecto
-            
-            if (hours < 4) {
-                color = '#dc3545'; // Rojo cuando quedan menos de 4 horas
-            } else if (hours < 8) {
-                color = '#ffc107'; // Amarillo cuando quedan menos de 8 horas
-            }
-            
+        const span = timer.querySelector('span');
+        if (!span) return;
+        if (!span.textContent.toLowerCase().includes('completado')) {
+            let color = '#28a745';
+            if (hours < 4) color = '#dc3545';
+            else if (hours < 8) color = '#ffc107';
             timer.innerHTML = `<span style="color: ${color};">⏳ ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m</span>`;
         }
     });
 }
 
-// NUEVO: Función para confirmar eliminación
+function initializeNumericHabits() {
+    // Inicializar valores y leer target desde data-attributes
+    document.querySelectorAll('.habit-value').forEach(element => {
+        const habitId = element.id.split('-')[1];
+        habitValues[habitId] = parseFloat(element.textContent) || 0;
+        // aseguramos que exista data-target (se añade en el template)
+        if (!element.dataset.target) element.dataset.target = element.getAttribute('data-target') || '0';
+    });
+
+    document.querySelectorAll('.increment-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const habitId = this.getAttribute('data-habit-id');
+            incrementValue(habitId);
+        });
+    });
+
+    document.querySelectorAll('.decrement-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const habitId = this.getAttribute('data-habit-id');
+            decrementValue(habitId);
+        });
+    });
+
+    document.querySelectorAll('.save-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const habitId = this.getAttribute('data-habit-id');
+            saveValue(habitId);
+        });
+    });
+}
+
+function incrementValue(habitId) {
+    if (!habitValues.hasOwnProperty(habitId)) return;
+    habitValues[habitId]++;
+    updateDisplay(habitId);
+    {% comment %} showSaveButton(habitId); {% endcomment %}
+    // Auto-guardar por hábito
+    clearTimeout(saveTimeouts[habitId]);
+    saveTimeouts[habitId] = setTimeout(() => saveValue(habitId), 1000);
+}
+
+function decrementValue(habitId) {
+    if (!habitValues.hasOwnProperty(habitId)) return;
+    habitValues[habitId]--;
+    if (habitValues[habitId] < 0) habitValues[habitId] = 0;
+    updateDisplay(habitId);
+    {% comment %} showSaveButton(habitId); {% endcomment %}
+    clearTimeout(saveTimeouts[habitId]);
+    saveTimeouts[habitId] = setTimeout(() => saveValue(habitId), 2000);
+}
+
+function updateDisplay(habitId) {
+    const valueElement = document.getElementById(`value-${habitId}`);
+    const progressElement = document.getElementById(`progress-${habitId}`);
+    const target = parseFloat(valueElement?.dataset?.target || '0');
+    
+    if (valueElement) {
+        valueElement.textContent = habitValues[habitId];
+    }
+    
+    if (progressElement && target > 0) {
+        const progress = Math.min((habitValues[habitId] / target) * 100, 100);
+        progressElement.style.width = `${progress}%`;
+        if (progress >= 100) progressElement.style.background = '#28a745';
+        else if (progress >= 75) progressElement.style.background = '#17a2b8';
+        else progressElement.style.background = '#007bff';
+    }
+    checkCompletion(habitId);
+}
+
+function showSaveButton(habitId) {
+    const saveBtn = document.querySelector(`.save-btn[data-habit-id="${habitId}"]`);
+    if (saveBtn) saveBtn.style.display = 'block';
+}
+
+function checkCompletion(habitId) {
+    const value = habitValues[habitId];
+    const valueElement = document.getElementById(`value-${habitId}`);
+    const target = parseFloat(valueElement?.dataset?.target || '0');
+    const habitCard = document.getElementById(`habit-${habitId}`);
+    
+    if (value >= target && habitCard) habitCard.classList.add('completed');
+    else if (habitCard) habitCard.classList.remove('completed');
+}
+
+function saveValue(habitId) {
+    const value = habitValues[habitId];
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/log/${habitId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken
+        },
+        body: `value=${encodeURIComponent(value)}`
+    })
+    .then(response => {
+        if (response.ok) {
+            const saveBtn = document.querySelector(`.save-btn[data-habit-id="${habitId}"]`);
+            if (saveBtn) saveBtn.style.display = 'none';
+            showMessage('¡Registro guardado!', 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showMessage('Error al guardar', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('Error al guardar', 'error');
+    })
+    .finally(() => {
+        clearTimeout(saveTimeouts[habitId]);
+    });
+}
+
+function showMessage(message, type) {
+    const messageDiv = document.createElement('div');
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem;
+        border-radius: 5px;
+        color: white;
+        z-index: 10000;
+        background: ${type === 'success' ? '#28a745' : '#dc3545'};
+    `;
+    messageDiv.textContent = message;
+    document.body.appendChild(messageDiv);
+    setTimeout(() => messageDiv.remove(), 3000);
+}
+
 function confirmDelete(habitId, habitName) {
     if (confirm(`¿Estás seguro de que quieres eliminar el hábito "${habitName}"? Esta acción no se puede deshacer.`)) {
-        // Crear un formulario dinámico para enviar la solicitud POST
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/habit/${habitId}/delete/`;
-        
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
         csrfInput.name = 'csrfmiddlewaretoken';
         csrfInput.value = csrfToken;
-        
         form.appendChild(csrfInput);
         document.body.appendChild(form);
         form.submit();
     }
 }
 
-// Actualizar cada minuto (no necesita ser en tiempo real exacto)
-updateIndividualTimers();
-setInterval(updateIndividualTimers, 60000); // Actualizar cada minuto
+document.addEventListener('DOMContentLoaded', function() {
+    updateIndividualTimers();
+    initializeNumericHabits();
+    setInterval(updateIndividualTimers, 60000);
+});
 </script>
 {% endblock %}

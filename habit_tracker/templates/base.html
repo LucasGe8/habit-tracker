@@ -282,6 +282,47 @@
         background-color: #dc3545 !important;
         color: white !important;
       }
+      /* Estilos para el sistema numérico */
+      .habit-value {
+        transition: all 0.3s ease;
+      }
+      
+      .progress-bar {
+        transition: width 0.3s ease, background-color 0.3s ease;
+      }
+      
+      /* Efectos para botones de incremento/decremento */
+      .increment-btn:hover,
+      .decrement-btn:hover {
+        transform: scale(1.1);
+      }
+      
+      .save-btn {
+        transition: all 0.3s ease;
+        animation: pulse 2s infinite;
+      }
+      
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      
+      /* Mejoras para tarjetas completadas */
+      .habit-card.completed {
+        border-left: 4px solid #28a745;
+        background: linear-gradient(135deg, #1a1a1a, #1e2b1e);
+      }
+      
+      .habit-card.completed .progress-bar {
+        background: #28a745 !important;
+      }
     </style>
   </head>
   <body>
