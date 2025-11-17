@@ -84,13 +84,17 @@ def log_habit(request, habit_id):
             except ValueError:
                 value = 0.0
         
+        # Si se envía un valor positivo, quitar la exclusión
         log, created = HabitLog.objects.update_or_create(
             habit=habit,
             date=today,
-            defaults={'value': value}
+            defaults={'value': value, 'excluded': False}  # Quitar exclusión
         )
         
-        messages.success(request, f'Registro guardado para {habit.name}!')
+        if value > 0:
+            messages.success(request, f'Registro guardado para {habit.name}!')
+        else:
+            messages.info(request, f'Día reactivado para {habit.name}.')
     
     return redirect('habit_list')
 
@@ -128,3 +132,20 @@ def statistics(request):
         })
     
     return render(request, 'habits/statistics.html', {'stats': stats})
+
+@login_required
+def exclude_day(request, habit_id):
+    habit = get_object_or_404(Habit, id=habit_id, user=request.user)
+    today = timezone.now().date()
+    
+    if request.method == 'POST':
+        # Marcar el log de hoy como excluido
+        log, created = HabitLog.objects.update_or_create(
+            habit=habit,
+            date=today,
+            defaults={'excluded': True, 'value': 0}
+        )
+        
+        messages.success(request, f'Día excluido para {habit.name}. Tu racha se mantiene.')
+    
+    return redirect('habit_list')

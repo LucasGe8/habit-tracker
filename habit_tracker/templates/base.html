@@ -51,9 +51,21 @@
       }
       
       .brand {
-        font-size: 1.5rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.25rem;
         font-weight: bold;
         color: #007bff;
+        line-height: 1;
+      }
+      
+      .brand-icon {
+        width: 28px;
+        height: 28px;
+        object-fit: contain;
+        border-radius: 6px;
+        display: inline-block;
       }
       
       .nav-links {
@@ -329,36 +341,36 @@
       .habit-card.completed .progress-bar {
         background: #28a745 !important;
       }
-
+      
       /* Responsive menu for small screens */
       .menu-toggle {
         display: none;
         background: transparent;
-        border: 1px solid rgba(255,255,255,0.08);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         color: #fff;
         padding: 0.4rem 0.6rem;
         border-radius: 6px;
         cursor: pointer;
         font-size: 1.1rem;
       }
-
+      
       @media (max-width: 640px) {
         .nav {
           flex-direction: row;
           align-items: center;
           gap: 0.5rem;
         }
-
+      
         .brand {
           flex: 1;
         }
-
+      
         .menu-toggle {
           display: inline-flex;
           align-items: center;
           justify-content: center;
         }
-
+      
         .nav-links {
           display: none;
           position: absolute;
@@ -372,28 +384,40 @@
           gap: 0.5rem;
           z-index: 200;
         }
-
+      
         .nav-links.show {
           display: flex;
         }
-
+      
         .nav-links a,
         .nav-links form {
           width: 100%;
         }
-
+      
         .user-info {
           width: 100%;
           display: flex;
           flex-direction: column;
           gap: 0.5rem;
         }
-
+      
         .user-info .username {
           font-size: 0.95rem;
         }
-
-        .container { padding: 12px; }
+      
+        .container {
+          padding: 12px;
+        }
+      }
+      /* Agrega esto en la sección de estilos */
+      .excluded {
+        border-left: 4px solid #6c757d;
+        background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+        opacity: 0.8;
+      }
+      
+      .excluded .habit-value {
+        color: #6c757d !important;
       }
     </style>
   </head>
@@ -401,7 +425,10 @@
     <div class="header">
       <div class="container">
         <div class="nav">
-          <div class="brand">Habit Tracker</div>
+          <div class="brand">
+            <img src="{% static 'images/favicon.png' %}" alt="Habit Tracker" class="brand-icon">
+            <span>Habit Tracker</span>
+          </div>
           <button class="menu-toggle" aria-expanded="false" aria-label="Mostrar menú">☰</button>
           <div class="nav-links">
             {% if user.is_authenticated %}
@@ -439,19 +466,19 @@
       {% endblock %}
     </div>
     <script>
-      (function(){
-        const toggle = document.querySelector('.menu-toggle');
-        const links = document.querySelector('.nav-links');
-        if (!toggle || !links) return;
+      ;(function () {
+        const toggle = document.querySelector('.menu-toggle')
+        const links = document.querySelector('.nav-links')
+        if (!toggle || !links) return
         toggle.addEventListener('click', () => {
-          const showed = links.classList.toggle('show');
-          toggle.setAttribute('aria-expanded', showed ? 'true' : 'false');
-        });
+          const showed = links.classList.toggle('show')
+          toggle.setAttribute('aria-expanded', showed ? 'true' : 'false')
+        })
         // close on resize to larger screens
         window.addEventListener('resize', () => {
-          if (window.innerWidth > 640) links.classList.remove('show');
-        });
-      })();
+          if (window.innerWidth > 640) links.classList.remove('show')
+        })
+      })()
     </script>
   </body>
 </html>

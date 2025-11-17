@@ -8,7 +8,8 @@
 
 <div class="habit-grid">
     {% for habit in habits %}
-    <div class="habit-card {% if habit.today_log and habit.today_log.value >= habit.target %}completed{% endif %}" 
+    <div class="habit-card {% if habit.today_log and habit.today_log.value >= habit.target and not habit.today_log.excluded %}completed{% endif %} 
+                {% if habit.today_log and habit.today_log.excluded %}excluded{% endif %}" 
          id="habit-{{ habit.id }}">
         <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 0.5rem;">
             <h3 style="flex: 1; margin-right: 1rem;">{{ habit.name }}</h3>
@@ -16,7 +17,9 @@
                 <div class="streak">🔥 {{ habit.current_streak }}</div>
                 <div class="individual-timer" data-habit-id="{{ habit.id }}" 
                      style="font-size: 0.7rem; margin-top: 0.2rem; font-family: monospace;">
-                    {% if habit.is_completed_today %}
+                    {% if habit.today_log and habit.today_log.excluded %}
+                        <span style="color: #6c757d;">⏸️ Día excluido</span>
+                    {% elif habit.is_completed_today %}
                         <span style="color: #28a745;">✅ Hoy completado</span>
                     {% else %}
                         {% with habit.hours_until_midnight as time_left %}
@@ -45,15 +48,28 @@
         </div>
         
         <div style="display: flex; gap: 0.5rem;">
-            {% if habit.today_log and habit.today_log.value >= habit.target %}
-                <form method="post" action="{% url 'log_habit' habit.id %}" style="flex: 1;">
+            {% if habit.today_log and habit.today_log.excluded %}
+                <!-- Estado: Día excluido -->
+                <div style="flex: 1; text-align: center; padding: 0.75rem; background: #6c757d; color: white; border-radius: 5px;">
+                    ⏸️ Día excluido
+                </div>
+                <form method="post" action="{% url 'log_habit' habit.id %}" style="display: inline;">
                     {% csrf_token %}
-                    <input type="hidden" name="value" value="0">
-                    <button type="submit" class="btn btn-outline" style="width: 100%;">
-                        ✅ Completado
+                    <input type="hidden" name="value" value="1">
+                    <button type="submit" class="btn btn-outline" style="padding: 0.5rem;" title="Reactivar día">
+                        🔄
+                    </button>
+                </form>
+            {% elif habit.today_log and habit.today_log.value >= habit.target and not habit.today_log.excluded %}
+                <!-- Estado: Completado - Mostrar botón de exclusión -->
+                <form method="post" action="{% url 'exclude_day' habit.id %}" style="flex: 1;" onsubmit="return confirmExclude({{ habit.id }}, {{ habit.current_streak }});">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline" style="width: 100%; color: #6c757d;">
+                        ⏸️ Excluir Hoy
                     </button>
                 </form>
             {% else %}
+                <!-- Estado: No completado - Comportamiento normal -->
                 {% if habit.goal_type == 'boolean' %}
                     <form method="post" action="{% url 'log_habit' habit.id %}" style="flex: 1;">
                         {% csrf_token %}
@@ -63,7 +79,6 @@
                         </button>
                     </form>
                 {% else %}
-                    <!-- NUEVO: Control para hábitos numéricos/tiempo con botones +/- -->
                     <div style="display: flex; gap: 0.5rem; width: 100%; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; background: #2a2a2a; border-radius: 8px; padding: 0.5rem;">
                             <button type="button" class="btn btn-outline decrement-btn" 
@@ -92,7 +107,7 @@
                 {% endif %}
             {% endif %}
             
-            <!-- BOTONES DE ACCIÓN -->
+            <!-- Botones de acción -->
             <div style="display: flex; gap: 0.25rem;">
                 <a href="{% url 'habit_edit' habit.id %}" class="btn btn-outline" style="padding: 0.5rem;">✏️</a>
                 <button type="button" class="btn btn-outline" style="padding: 0.5rem; color: #dc3545;" 
@@ -100,8 +115,8 @@
             </div>
         </div>
         
-        <!-- Barra de progreso para hábitos numéricos -->
-        {% if habit.goal_type != 'boolean' %}
+        <!-- Barra de progreso -->
+        {% if habit.goal_type != 'boolean' and not habit.today_log.excluded %}
         <div style="margin-top: 0.5rem; background: #333; border-radius: 4px; height: 6px; overflow: hidden;">
             <div id="progress-{{ habit.id }}" class="progress-bar" 
                  style="height: 100%; background: #007bff; width: 
@@ -120,7 +135,7 @@
     {% endfor %}
 </div>
 
-<!-- Script para actualizar los temporizadores individuales -->
+<!-- Scripts existentes... -->
 <script>
 // Variables globales para almacenar valores temporales y timeouts por hábito
 const habitValues = {};
@@ -142,7 +157,7 @@ function updateIndividualTimers() {
     timerElements.forEach(timer => {
         const span = timer.querySelector('span');
         if (!span) return;
-        if (!span.textContent.toLowerCase().includes('completado')) {
+        if (!span.textContent.toLowerCase().includes('completado') && !span.textContent.toLowerCase().includes('excluido')) {
             let color = '#28a745';
             if (hours < 4) color = '#dc3545';
             else if (hours < 8) color = '#ffc107';
@@ -152,11 +167,10 @@ function updateIndividualTimers() {
 }
 
 function initializeNumericHabits() {
-    // Inicializar valores y leer target desde data-attributes
+    // Inicializar valores y leer target desde data-attributes (si están)
     document.querySelectorAll('.habit-value').forEach(element => {
         const habitId = element.id.split('-')[1];
         habitValues[habitId] = parseFloat(element.textContent) || 0;
-        // aseguramos que exista data-target (se añade en el template)
         if (!element.dataset.target) element.dataset.target = element.getAttribute('data-target') || '0';
     });
 
@@ -186,7 +200,6 @@ function incrementValue(habitId) {
     if (!habitValues.hasOwnProperty(habitId)) return;
     habitValues[habitId]++;
     updateDisplay(habitId);
-    {% comment %} showSaveButton(habitId); {% endcomment %}
     // Auto-guardar por hábito
     clearTimeout(saveTimeouts[habitId]);
     saveTimeouts[habitId] = setTimeout(() => saveValue(habitId), 1000);
@@ -197,7 +210,6 @@ function decrementValue(habitId) {
     habitValues[habitId]--;
     if (habitValues[habitId] < 0) habitValues[habitId] = 0;
     updateDisplay(habitId);
-    {% comment %} showSaveButton(habitId); {% endcomment %}
     clearTimeout(saveTimeouts[habitId]);
     saveTimeouts[habitId] = setTimeout(() => saveValue(habitId), 2000);
 }
@@ -238,7 +250,8 @@ function checkCompletion(habitId) {
 
 function saveValue(habitId) {
     const value = habitValues[habitId];
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const csrfTokenEl = document.querySelector('[name=csrfmiddlewaretoken]');
+    const csrfToken = csrfTokenEl ? csrfTokenEl.value : '';
     
     fetch(`/log/${habitId}/`, {
         method: 'POST',
@@ -298,6 +311,11 @@ function confirmDelete(habitId, habitName) {
         document.body.appendChild(form);
         form.submit();
     }
+}
+
+// NUEVO: Función para confirmar exclusión
+function confirmExclude(habitId, streak) {
+    return confirm(`¿Excluir hoy sin afectar tu racha de ${streak} días?\n\nEl día se marcará como excluido y no afectará tu racha.`);
 }
 
 document.addEventListener('DOMContentLoaded', function() {

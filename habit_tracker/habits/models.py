@@ -20,11 +20,10 @@ class Habit(models.Model):
         return self.name
     
     def formatted_created_at(self):
-        """Devuelve la fecha formateada de manera legible"""
         return self.created_at.strftime("%d/%m/%Y")
     
     def current_streak(self):
-        logs = self.habitlog_set.order_by('-date')
+        logs = self.habitlog_set.filter(excluded=False).order_by('-date')  # Excluir logs marcados
         if not logs:
             return 0
             
@@ -46,10 +45,11 @@ class Habit(models.Model):
         return streak
     
     def is_completed_today(self):
-        """Verifica si el hábito ya fue completado hoy"""
         today = timezone.now().date()
         try:
             log = HabitLog.objects.get(habit=self, date=today)
+            if log.excluded:  # Si está excluido, no cuenta como completado
+                return False
             if self.goal_type == 'boolean':
                 return log.value >= 1
             else:
@@ -58,21 +58,21 @@ class Habit(models.Model):
             return False
     
     def hours_until_midnight(self):
-        """Calcula las horas hasta la medianoche para el temporizador"""
         now = timezone.now()
         tomorrow = now + timedelta(days=1)
         midnight = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
         time_left = midnight - now
         return int(time_left.total_seconds() // 3600), int((time_left.total_seconds() % 3600) // 60)
 
-# AQUÍ ESTÁ LA CORRECCIÓN - EL MODELO SE LLAMA HabitLog (con L mayúscula)
 class HabitLog(models.Model):
     habit = models.ForeignKey(Habit, on_delete=models.CASCADE)
     date = models.DateField(default=timezone.now)
     value = models.FloatField(default=0.0)
+    excluded = models.BooleanField(default=False)  # NUEVO: Para excluir días
     
     class Meta:
         unique_together = ['habit', 'date']
     
     def __str__(self):
-        return f"{self.habit.name} - {self.date}"
+        status = " (excluido)" if self.excluded else ""
+        return f"{self.habit.name} - {self.date}{status}"
