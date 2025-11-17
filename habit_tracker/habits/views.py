@@ -98,23 +98,32 @@ def log_habit(request, habit_id):
 def statistics(request):
     habits = Habit.objects.filter(user=request.user)
     stats = []
+    today = timezone.now().date()
     
     for habit in habits:
         logs = HabitLog.objects.filter(habit=habit).order_by('date')
-        total_logs = logs.count()
+        total_registros = logs.count()
         
+        # Calcular días desde la creación del hábito
+        dias_desde_creacion = (today - habit.created_at.date()).days + 1
+        
+        # Calcular días completados
         if habit.goal_type == 'boolean':
-            completed = logs.filter(value__gte=1).count()
-            completion_rate = (completed / total_logs * 100) if total_logs > 0 else 0
+            completados = logs.filter(value__gte=1).count()
         else:
-            completed = logs.filter(value__gte=habit.target).count()
-            completion_rate = (completed / total_logs * 100) if total_logs > 0 else 0
+            completados = logs.filter(value__gte=habit.target).count()
+        
+        # Calcular tasas
+        tasa_exito = (completados / total_registros * 100) if total_registros > 0 else 0
+        tasa_registro = (total_registros / dias_desde_creacion * 100) if dias_desde_creacion > 0 else 0
         
         stats.append({
             'habit': habit,
-            'total_logs': total_logs,
-            'completed': completed,
-            'completion_rate': round(completion_rate, 1),
+            'dias_desde_creacion': dias_desde_creacion,
+            'total_registros': total_registros,
+            'completados': completados,
+            'tasa_exito': round(tasa_exito, 1),
+            'tasa_registro': round(tasa_registro, 1),
             'current_streak': habit.current_streak(),
         })
     

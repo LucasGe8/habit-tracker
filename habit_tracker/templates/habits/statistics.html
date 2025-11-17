@@ -8,13 +8,14 @@
     <div class="card">
         <h3 style="margin-bottom: 0.5rem;">{{ stat.habit.name }}</h3>
         
-        <!-- NUEVO: Fecha de creación en estadísticas -->
+        <!-- Información del hábito -->
         <div style="font-size: 0.8rem; color: #888; margin-bottom: 1rem;">
             Creado el {{ stat.habit.formatted_created_at }}
             <span style="color: #007bff; margin-left: 0.5rem;">•</span>
             <span style="color: #007bff;">{{ stat.habit.get_goal_type_display }}</span>
         </div>
         
+        <!-- Métricas principales -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;">
             <div style="text-align: center;">
                 <div style="font-size: 2rem; font-weight: bold; color: #007bff;">
@@ -25,16 +26,51 @@
             
             <div style="text-align: center;">
                 <div style="font-size: 2rem; font-weight: bold; color: #28a745;">
-                    {{ stat.completion_rate }}%
+                    {{ stat.tasa_exito }}%
                 </div>
                 <div style="font-size: 0.8rem; color: #ccc;">Tasa de éxito</div>
             </div>
         </div>
         
-        <div style="background-color: #2a2a2a; border-radius: 10px; padding: 0.5rem; margin-top: 0.5rem;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                <span>Completados: {{ stat.completed }}</span>
-                <span>Total: {{ stat.total_logs }}</span>
+        <!-- Nuevas métricas híbridas -->
+        <div style="background-color: #2a2a2a; border-radius: 10px; padding: 1rem; margin-top: 0.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
+                <div style="text-align: center;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #17a2b8;">
+                        {{ stat.dias_desde_creacion }}
+                    </div>
+                    <div style="color: #ccc;">Días desde creación</div>
+                </div>
+                
+                <div style="text-align: center;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #ffc107;">
+                        {{ stat.total_registros }}
+                    </div>
+                    <div style="color: #ccc;">Días registrados</div>
+                </div>
+            </div>
+            
+            <!-- Barra de progreso del registro -->
+            <div style="margin-top: 0.75rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                    <span style="color: #ccc;">Consistencia en registro:</span>
+                    <span style="color: #ffc107;">{{ stat.tasa_registro }}%</span>
+                </div>
+                <div style="background: #333; border-radius: 4px; height: 6px; overflow: hidden;">
+                    <div style="height: 100%; background: #ffc107; width: {{ stat.tasa_registro }}%; 
+                                transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+            
+            <!-- Resumen de completados vs registros -->
+            <div style="margin-top: 0.75rem; padding: 0.5rem; background: #333; border-radius: 5px; text-align: center;">
+                <div style="font-size: 0.9rem; color: #ccc;">
+                    <span style="color: #28a745;">{{ stat.completados }}</span> de 
+                    <span style="color: #ffc107;">{{ stat.total_registros }}</span> días registrados completados
+                </div>
+                <div style="font-size: 0.8rem; color: #888; margin-top: 0.25rem;">
+                    ({{ stat.dias_desde_creacion }} días totales desde creación)
+                </div>
             </div>
         </div>
     </div>
@@ -46,4 +82,15 @@
     </div>
     {% endfor %}
 </div>
+
+<style>
+/* Mejoras visuales para las nuevas métricas */
+.habit-grid .card {
+    transition: transform 0.2s ease;
+}
+
+.habit-grid .card:hover {
+    transform: translateY(-2px);
+}
+</style>
 {% endblock %}
