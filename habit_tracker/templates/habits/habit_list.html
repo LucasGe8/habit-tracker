@@ -11,27 +11,41 @@
     <div class="habit-card {% if habit.today_log and habit.today_log.value >= habit.target and not habit.today_log.excluded %}completed{% endif %} 
                 {% if habit.today_log and habit.today_log.excluded %}excluded{% endif %}" 
          id="habit-{{ habit.id }}">
-        <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 0.5rem;">
-            <h3 style="flex: 1; margin-right: 1rem;">{{ habit.name }}</h3>
-            <div style="text-align: right;">
-                <div class="streak">🔥 {{ habit.current_streak }}</div>
+        <!-- CABECERA ORIGINAL (como estaba antes) -->
+        <!-- Header: nombre a la izquierda, racha + valor + tiempo a la derecha (UNA LÍNEA) -->
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:0.25rem;">
+            <h3 style="flex:1 1 auto; margin:0; margin-right:0.75rem; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                {{ habit.name }}
+            </h3>
+
+            <!-- Right cluster: racha (icon + valor coloreado) y tiempo restante, alineados a la derecha -->
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex:0 0 auto; min-width:0;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <div class="streak" aria-hidden="true" style="font-size:0.95rem; line-height:1;">🔥</div>
+                    <div style="font-weight:700; font-size:0.95rem; color: #ffd700; min-width:0; text-align:right;">
+                        {{ habit.current_streak }}
+                    </div>
+                </div>
+
                 <div class="individual-timer" data-habit-id="{{ habit.id }}" 
-                     style="font-size: 0.7rem; margin-top: 0.2rem; font-family: monospace;">
+                     style="font-size:0.72rem; font-family:monospace; color:#ffc107; text-align:right;">
                     {% if habit.today_log and habit.today_log.excluded %}
                         <span style="color: #6c757d;">⏸️ Día excluido</span>
                     {% elif habit.is_completed_today %}
-                        <span style="color: #28a745;">✅ Hoy completado</span>
+                        <span style="color: #28a745;">✅ Hoy</span>
                     {% else %}
                         {% with habit.hours_until_midnight as time_left %}
-                        <span style="color: #ffc107;">⏳ {{ time_left.0 }}h {{ time_left.1 }}m</span>
+                        <span>⏳ {{ time_left.0 }}h {{ time_left.1 }}m</span>
                         {% endwith %}
                     {% endif %}
                 </div>
             </div>
         </div>
         
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <span style="font-size: 0.8rem; color: #888;">
+        <!-- EL RESTO DEL CÓDIGO SE MANTIENE EXACTAMENTE IGUAL -->
+        <!-- Información del hábito -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap;">
+            <span style="font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;">
                 Creado el {{ habit.formatted_created_at }}
             </span>
             <span style="font-size: 0.8rem; color: #007bff; background: rgba(0,123,255,0.1); padding: 0.2rem 0.5rem; border-radius: 10px;">
@@ -39,6 +53,7 @@
             </span>
         </div>
         
+        <!-- Meta -->
         <div style="margin-bottom: 1rem; font-size: 0.9rem; color: #ccc;">
             {% if habit.goal_type == 'boolean' %}
                 Meta: Completar diariamente
@@ -47,46 +62,65 @@
             {% endif %}
         </div>
         
-        <div style="display: flex; gap: 0.5rem;">
+        <!-- Controles del hábito -->
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
             {% if habit.today_log and habit.today_log.excluded %}
                 <!-- Estado: Día excluido -->
-                <div style="flex: 1; text-align: center; padding: 0.75rem; background: #6c757d; color: white; border-radius: 5px;">
+                <div style="text-align: center; padding: 0.75rem; background: #6c757d; color: white; border-radius: 5px;">
                     ⏸️ Día excluido
                 </div>
-                <form method="post" action="{% url 'log_habit' habit.id %}" style="display: inline;">
-                    {% csrf_token %}
-                    <input type="hidden" name="value" value="1">
-                    <button type="submit" class="btn btn-outline" style="padding: 0.5rem;" title="Reactivar día">
-                        🔄
-                    </button>
-                </form>
+                <div style="display: flex; gap: 0.5rem;">
+                    {% if habit.goal_type == 'boolean' %}
+                        <form method="post" action="{% url 'log_habit' habit.id %}" style="flex: 1;">
+                            {% csrf_token %}
+                            <input type="hidden" name="value" value="0">
+                            <button type="submit" class="btn btn-outline" style="width: 100%;">
+                                🔄 Reactivar
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{% url 'log_habit' habit.id %}" style="flex: 1;">
+                            {% csrf_token %}
+                            <input type="hidden" name="value" value="0">
+                            <button type="submit" class="btn btn-outline" style="width: 100%;">
+                                🔄 Reactivar
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+                
             {% elif habit.today_log and habit.today_log.value >= habit.target and not habit.today_log.excluded %}
-                <!-- Estado: Completado - Mostrar botón de exclusión -->
-                <form method="post" action="{% url 'exclude_day' habit.id %}" style="flex: 1;" onsubmit="return confirmExclude({{ habit.id }}, {{ habit.current_streak }});">
+                <!-- Estado: Completado -->
+                <form method="post" action="{% url 'exclude_day' habit.id %}" style="width: 100%;">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-outline" style="width: 100%; color: #6c757d;">
+                    <button type="submit" class="btn btn-outline" style="width: 100%; color: #ffffffff;" 
+                            onclick="return confirm('¿Excluir hoy sin afectar tu racha de {{ habit.current_streak }} días?')">
                         ⏸️ Excluir Hoy
                     </button>
                 </form>
+                
             {% else %}
-                <!-- Estado: No completado - Comportamiento normal -->
+                <!-- Estado: No completado -->
                 {% if habit.goal_type == 'boolean' %}
-                    <form method="post" action="{% url 'log_habit' habit.id %}" style="flex: 1;">
+                    <form method="post" action="{% url 'log_habit' habit.id %}" style="width: 100%;">
                         {% csrf_token %}
                         <input type="hidden" name="value" value="1">
                         <button type="submit" class="btn" style="width: 100%;">
                             Marcar Completado
                         </button>
                     </form>
-                {% else %}
-                    <div style="display: flex; gap: 0.5rem; width: 100%; align-items: center;">
+                    
+                {% elif habit.goal_type == 'numeric' %}
+                    <!-- Sistema numérico optimizado -->
+                    <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; background: #2a2a2a; border-radius: 8px; padding: 0.5rem;">
                             <button type="button" class="btn btn-outline decrement-btn" 
                                     data-habit-id="{{ habit.id }}" 
-                                    style="padding: 0.5rem; min-width: 40px;">-</button>
+                                    style="padding: 0.5rem; min-width: 40px; font-size: 1.2rem;">-</button>
                             
                             <div style="text-align: center; flex: 1;">
                                 <div id="value-{{ habit.id }}" class="habit-value" 
+                                     data-target="{{ habit.target }}"
                                      style="font-size: 1.2rem; font-weight: bold; color: #007bff;">
                                     {{ habit.today_log.value|default:0|floatformat:0 }}
                                 </div>
@@ -97,26 +131,98 @@
                             
                             <button type="button" class="btn btn-outline increment-btn" 
                                     data-habit-id="{{ habit.id }}" 
-                                    style="padding: 0.5rem; min-width: 40px;">+</button>
+                                    style="padding: 0.5rem; min-width: 40px; font-size: 1.2rem;">+</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn save-btn" 
+                            data-habit-id="{{ habit.id }}" 
+                            style="width: 100%; display: none;">💾 Guardar Cambios</button>
+                    
+                {% elif habit.goal_type == 'time' %}
+                    <!-- NUEVO DISEÑO: Temporizador optimizado para móviles -->
+                    <div class="timer-container">
+                        <!-- Display compacto del temporizador -->
+                        <div class="timer-display-compact" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                            <!-- Añadimos la clase 'timer-display' para que el JS inicialice correctamente -->
+                            <div id="timer-display-{{ habit.id }}" class="timer-display timer-time" 
+                                 style="font-size: 1.8rem; font-weight: bold; font-family: monospace; text-align: center; display:block;">
+                                {{ habit.formatted_target_time }}
+                            </div>
+                            <div class="timer-target" style="font-size: 0.8rem; color: #888; margin-top: 0.25rem; text-align: center;">
+                                {{ habit.target }} min objetivo
+                            </div>
                         </div>
                         
-                        <button type="button" class="btn save-btn" 
-                                data-habit-id="{{ habit.id }}" 
-                                style="flex: 0.5; display: none;">💾</button>
+                        <!-- Barra de progreso compacta -->
+                        <div style="background: #333; border-radius: 10px; height: 6px; margin: 0.5rem 0; overflow: hidden;">
+                            <div id="timer-progress-{{ habit.id }}" class="timer-progress-bar" 
+                                 style="height: 100%; background: #007bff; width: 0%; transition: width 0.3s ease;">
+                            </div>
+                        </div>
+                        
+                        <!-- Botones de control optimizados -->
+                        <div class="timer-controls-compact">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <button type="button" class="btn timer-start-btn" 
+                                        data-habit-id="{{ habit.id }}"
+                                        style="background: #28a745; {% if habit.timer_state == 'running' %}display: none;{% endif %}">
+                                    ▶️ Iniciar
+                                </button>
+                                
+                                <button type="button" class="btn timer-pause-btn" 
+                                        data-habit-id="{{ habit.id }}"
+                                        style="background: #ffc107; {% if habit.timer_state != 'running' %}display: none;{% endif %}">
+                                    ⏸️ Pausar
+                                </button>
+                                
+                                <button type="button" class="btn timer-resume-btn" 
+                                        data-habit-id="{{ habit.id }}"
+                                        style="background: #17a2b8; {% if habit.timer_state != 'paused' %}display: none;{% endif %}">
+                                    🔄 Reanudar
+                                </button>
+                                
+                                <button type="button" class="btn timer-stop-btn" 
+                                        data-habit-id="{{ habit.id }}"
+                                        style="background: #dc3545;">
+                                    ⏹️ Parar
+                                </button>
+                            </div>
+                            
+                            <button type="button" class="btn timer-reset-btn" 
+                                    data-habit-id="{{ habit.id }}"
+                                    style="background: #6c757d; width: 100%;">
+                                🔃 Reiniciar
+                            </button>
+                        </div>
+                        
+                        <!-- Estado del temporizador -->
+                        <div id="timer-status-{{ habit.id }}" style="text-align: center; margin-top: 0.5rem; font-size: 0.8rem; color: #888;">
+                            {% if habit.timer_state == 'running' %}
+                                ⏱️ En progreso...
+                            {% elif habit.timer_state == 'paused' %}
+                                ⏸️ Pausado
+                            {% else %}
+                                Listo para comenzar
+                            {% endif %}
+                        </div>
                     </div>
                 {% endif %}
             {% endif %}
             
-            <!-- Botones de acción -->
-            <div style="display: flex; gap: 0.25rem;">
-                <a href="{% url 'habit_edit' habit.id %}" class="btn btn-outline" style="padding: 0.5rem;">✏️</a>
-                <button type="button" class="btn btn-outline" style="padding: 0.5rem; color: #dc3545;" 
-                        onclick="confirmDelete({{ habit.id }}, '{{ habit.name|escapejs }}')">🗑️</button>
+            <!-- Botones de acción compactos -->
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                <a href="{% url 'habit_edit' habit.id %}" class="btn btn-outline" style="flex: 1; padding: 0.5rem; text-align: center;">
+                    ✏️ Editar
+                </a>
+                <button type="button" class="btn btn-outline" style="flex: 1; padding: 0.5rem; color: #ffffffff; text-align: center;" 
+                        onclick="confirmDelete({{ habit.id }}, '{{ habit.name|escapejs }}')">
+                    🗑️ Eliminar
+                </button>
             </div>
         </div>
         
-        <!-- Barra de progreso -->
-        {% if habit.goal_type != 'boolean' and not habit.today_log.excluded %}
+        <!-- Barras de progreso para hábitos numéricos -->
+        {% if habit.goal_type == 'numeric' and not habit.today_log.excluded %}
         <div style="margin-top: 0.5rem; background: #333; border-radius: 4px; height: 6px; overflow: hidden;">
             <div id="progress-{{ habit.id }}" class="progress-bar" 
                  style="height: 100%; background: #007bff; width: 
@@ -134,8 +240,433 @@
     </div>
     {% endfor %}
 </div>
+<!-- Estilos optimizados para móviles - VERSIÓN CORREGIDA -->
+<style>
+/* Contenedor principal responsivo */
+.habit-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+}
 
-<!-- Scripts existentes... -->
+/* Mejoras para móviles */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .habit-card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        /* allow children to shrink so long controls don't push header */
+        min-width: 0;
+    }
+    
+    /* Mantener la cabecera en una sola línea en móvil: nombre a izquierda, info a la derecha */
+    .habit-card > div:first-child {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 0.5rem !important;
+        min-width: 0;
+    }
+    
+    .habit-card > div:first-child h3 {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+        font-size: 1.2rem;
+        min-width: 0; /* important so title can shrink */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    /* Temporizador optimizado para móviles */
+    .timer-container {
+        padding: 0.75rem;
+        background: #2a2a2a;
+        border-radius: 10px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .timer-display-compact {
+        margin-bottom: 0.75rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .timer-time {
+        font-size: 1.6rem !important;
+        margin-bottom: 0.25rem;
+        /* permitir que el timer ocupe el ancho necesario pero sin romper el layout */
+        max-width: 100%;
+        width: auto;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: nowrap;
+        display: inline-block;
+    }
+    
+    /* Controles: evitar que ocupen más ancho del disponible */
+    .timer-controls-compact { display:flex; gap:0.4rem; flex-wrap:wrap; justify-content:center; }
+    .timer-controls-compact .btn {
+        padding: 0.45rem 0.5rem;
+        font-size: 0.9rem;
+        min-width: 44px;
+        flex: 0 0 auto;
+    }
+    /* make action buttons compact and allow them to share space */
+    .habit-card .btn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    .timer-controls-compact .btn {
+        padding: 0.6rem 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Botones de acción más compactos */
+    .btn {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    /* ELIMINADO: Reglas problemáticas que afectaban la navegación global */
+    /* .nav {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .nav-links {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .user-info {
+        flex-direction: column;
+        text-align: center;
+    } */
+}
+
+/* Mejoras para tablets */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .habit-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .timer-controls-compact .btn {
+        padding: 0.5rem 0.4rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Estilos para el temporizador en progreso */
+.timer-running .timer-time {
+    animation: pulse 2s infinite;
+    color: #007bff !important;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Estados de color para el temporizador */
+.timer-complete .timer-time {
+    color: #28a745 !important;
+}
+
+.timer-paused .timer-time {
+    color: #ffc107 !important;
+}
+
+/* Efectos hover para botones */
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Mejoras visuales para las tarjetas */
+.habit-card {
+    transition: all 0.3s ease;
+    border: 1px solid #333;
+}
+
+.habit-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.1);
+}
+
+/* Tarjeta completada: degradado sutil verde -> card normal (menos agresivo) */
+.habit-card.completed {
+    /* reforzar ligeramente el degradado verde manteniendo sutileza */
+    background: linear-gradient(135deg,
+                rgba(40,167,69,0.14) 0%,
+                rgba(40,167,69,0.06) 30%,
+                #1e1e1e 100%);
+    border-color: rgba(40,167,69,0.12);
+    color: inherit;
+    box-shadow: 0 6px 12px rgba(40,167,69,0.10);
+}
+
+.habit-card.completed h3 { color: #e9f6ec; } /* título ligeramente aclarado */
+.habit-card.completed .streak { color: #ffd700; } /* mantener color del icono/valor */
+.habit-card.completed .habit-value { color: #e6f9e9 !important; }
+
+/* NUEVO: Tarjeta NO completada — sutil degradado rojo -> card normal */
+.habit-card:not(.completed) {
+    background: linear-gradient(135deg,
+                rgba(220,53,69,0.12) 0%,
+                rgba(220,53,69,0.06) 35%,
+                #1e1e1e 100%);
+    border-color: rgba(220,53,69,0.08);
+    color: inherit;
+    box-shadow: 0 6px 10px rgba(220,53,69,0.06);
+}
+
+/* Accentos rojos en tarjetas no completadas (racha / valores) */
+.habit-card:not(.completed) .streak { color: #ff6b6b; }
+.habit-card:not(.completed) .habit-value { color: #ff6b6b !important; }
+</style>
+<!-- Script para el sistema de temporizador -->
+<script>
+class TimerManager {
+    constructor() {
+        this.timers = new Map();
+        this.updateIntervals = new Map();
+    }
+
+    initTimer(habitId) {
+        this.updateTimerDisplay(habitId);
+        this.startTimerUpdates(habitId);
+    }
+
+    startTimerUpdates(habitId) {
+        // Actualizar estado cada segundo
+        this.updateTimerStatus(habitId);
+        const interval = setInterval(() => {
+            this.updateTimerStatus(habitId);
+        }, 1000);
+        this.updateIntervals.set(habitId, interval);
+    }
+
+    stopTimerUpdates(habitId) {
+        const interval = this.updateIntervals.get(habitId);
+        if (interval) {
+            clearInterval(interval);
+            this.updateIntervals.delete(habitId);
+        }
+    }
+
+    async updateTimerStatus(habitId) {
+        try {
+            const response = await fetch(`/timer/${habitId}/status/`);
+            const data = await response.json();
+            this.updateTimerDisplay(habitId, data);
+        } catch (error) {
+            console.error('Error updating timer status:', error);
+        }
+    }
+
+    updateTimerDisplay(habitId, data = null) {
+        const display = document.getElementById(`timer-display-${habitId}`);
+        const progressBar = document.getElementById(`timer-progress-${habitId}`);
+        const statusElement = document.getElementById(`timer-status-${habitId}`);
+        
+        if (!display) return;
+
+        if (data) {
+            // Actualizar display del tiempo
+            const remainingSeconds = data.remaining;
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = Math.floor(remainingSeconds % 60);
+            display.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // Actualizar barra de progreso
+            const targetSeconds = data.target_minutes * 60;
+            const progressPercent = ((targetSeconds - remainingSeconds) / targetSeconds) * 100;
+            if (progressBar) {
+                progressBar.style.width = `${progressPercent}%`;
+                
+                // Cambiar color según el progreso
+                if (progressPercent >= 100) {
+                    progressBar.style.background = '#28a745';
+                    display.style.color = '#28a745';
+                } else if (progressPercent >= 75) {
+                    progressBar.style.background = '#17a2b8';
+                    display.style.color = '#17a2b8';
+                } else if (data.state === 'running') {
+                    progressBar.style.background = '#007bff';
+                    display.style.color = '#007bff';
+                } else {
+                    progressBar.style.background = '#6c757d';
+                    display.style.color = '#6c757d';
+                }
+            }
+
+            // Actualizar estado y botones
+            this.updateTimerUI(habitId, data.state);
+            
+            if (statusElement) {
+                if (data.state === 'running') {
+                    statusElement.innerHTML = '⏱️ En progreso...';
+                    statusElement.style.color = '#007bff';
+                } else if (data.state === 'paused') {
+                    statusElement.innerHTML = '⏸️ Pausado';
+                    statusElement.style.color = '#ffc107';
+                } else {
+                    statusElement.innerHTML = 'Listo para comenzar';
+                    statusElement.style.color = '#6c757d';
+                }
+            }
+
+            // Completar automáticamente si se alcanza el tiempo
+            if (data.is_complete && data.state === 'running') {
+                this.completeTimer(habitId);
+            }
+        }
+    }
+
+    updateTimerUI(habitId, state) {
+        const startBtn = document.querySelector(`.timer-start-btn[data-habit-id="${habitId}"]`);
+        const pauseBtn = document.querySelector(`.timer-pause-btn[data-habit-id="${habitId}"]`);
+        const resumeBtn = document.querySelector(`.timer-resume-btn[data-habit-id="${habitId}"]`);
+
+        if (startBtn) startBtn.style.display = state === 'stopped' || state === 'paused' ? 'block' : 'none';
+        if (pauseBtn) pauseBtn.style.display = state === 'running' ? 'block' : 'none';
+        if (resumeBtn) resumeBtn.style.display = state === 'paused' ? 'block' : 'none';
+    }
+
+    async timerAction(habitId, action) {
+        try {
+            const response = await fetch(`/timer/${habitId}/action/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCSRFToken()
+                },
+                body: JSON.stringify({ action: action })
+            });
+            
+            const data = await response.json();
+            
+            if (action === 'stop' && data.status === 'completed') {
+                // Recargar la página después de completar
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Error performing timer action:', error);
+            return { status: 'error', message: 'Error de conexión' };
+        }
+    }
+
+    startTimer(habitId) {
+        this.timerAction(habitId, 'start');
+    }
+
+    pauseTimer(habitId) {
+        this.timerAction(habitId, 'pause');
+    }
+
+    resumeTimer(habitId) {
+        this.timerAction(habitId, 'resume');
+    }
+
+    async completeTimer(habitId) {
+        const result = await this.timerAction(habitId, 'stop');
+        if (result.status === 'completed') {
+            alert(result.message);
+        }
+    }
+
+    resetTimer(habitId) {
+        if (confirm('¿Reiniciar el temporizador? Se perderá el progreso actual.')) {
+            this.timerAction(habitId, 'reset');
+        }
+    }
+
+    getCSRFToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+}
+
+// Inicializar el manager de temporizadores
+const timerManager = new TimerManager();
+
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar todos los temporizadores de hábitos de tiempo
+    document.querySelectorAll('.timer-display').forEach(display => {
+        const habitId = display.id.split('-')[2];
+        timerManager.initTimer(habitId);
+    });
+    
+    // Event listeners para botones de temporizador
+    document.querySelectorAll('.timer-start-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const habitId = this.getAttribute('data-habit-id');
+            timerManager.startTimer(habitId);
+        });
+    });
+    
+    document.querySelectorAll('.timer-pause-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const habitId = this.getAttribute('data-habit-id');
+            timerManager.pauseTimer(habitId);
+        });
+    });
+    
+    document.querySelectorAll('.timer-resume-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const habitId = this.getAttribute('data-habit-id');
+            timerManager.resumeTimer(habitId);
+        });
+    });
+    
+    document.querySelectorAll('.timer-stop-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const habitId = this.getAttribute('data-habit-id');
+            timerManager.completeTimer(habitId);
+        });
+    });
+    
+    document.querySelectorAll('.timer-reset-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const habitId = this.getAttribute('data-habit-id');
+            timerManager.resetTimer(habitId);
+        });
+    });
+    
+    // ... (el resto de tus scripts existentes)
+});
+
+// Función para confirmar eliminación (existente)
+function confirmDelete(habitId, habitName) {
+    if (confirm(`¿Estás seguro de que quieres eliminar el hábito "${habitName}"? Esta acción no se puede deshacer.`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/habit/${habitId}/delete/`;
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+
+<!-- Scripts existentes para temporizadores individuales y sistema numérico -->
 <script>
 // Variables globales para almacenar valores temporales y timeouts por hábito
 const habitValues = {};

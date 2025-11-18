@@ -5,6 +5,8 @@ from django.utils import timezone
 from django.contrib import messages
 from .models import Habit, HabitLog
 from .forms import HabitForm, UserRegisterForm
+from django.http import JsonResponse
+import json
 
 def register(request):
     if request.method == 'POST':
@@ -22,7 +24,7 @@ def register(request):
 @login_required
 def habit_list(request):
     habits = Habit.objects.filter(user=request.user)
-    today = timezone.now().date()
+    today = timezone.localdate()
     
     for habit in habits:
         try:
@@ -71,30 +73,38 @@ def habit_delete(request, pk):
 @login_required
 def log_habit(request, habit_id):
     habit = get_object_or_404(Habit, id=habit_id, user=request.user)
-    today = timezone.now().date()
+    today = timezone.localdate()
     
     if request.method == 'POST':
-        value = request.POST.get('value', 1.0)
-        
+        raw = request.POST.get('value', '1')
+        try:
+            value = float(raw)
+        except Exception:
+            value = 0.0
+
+        # Normalizar booleano
         if habit.goal_type == 'boolean':
-            value = 1.0 if value else 0.0
-        else:
-            try:
-                value = float(value)
-            except ValueError:
-                value = 0.0
-        
-        # Si se envía un valor positivo, quitar la exclusión
+            value = 1.0 if value >= 1 else 0.0
+
+        # Si el día ya existe y está excluido, y vienen a "reactivar" con value == 0,
+        # eliminamos el registro para restaurar el estado anterior (no romper racha).
+        existing = HabitLog.objects.filter(habit=habit, date=today).first()
+        if value == 0.0 and existing and existing.excluded:
+            existing.delete()
+            messages.info(request, f'Día reactivado para {habit.name}. Registro eliminado.')
+            return redirect('habit_list')
+
+        # Crear / actualizar log normal (quita exclusión)
         log, created = HabitLog.objects.update_or_create(
             habit=habit,
             date=today,
-            defaults={'value': value, 'excluded': False}  # Quitar exclusión
+            defaults={'value': value, 'excluded': False}
         )
-        
+
         if value > 0:
             messages.success(request, f'Registro guardado para {habit.name}!')
         else:
-            messages.info(request, f'Día reactivado para {habit.name}.')
+            messages.info(request, f'Día registrado como no completado para {habit.name}.')
     
     return redirect('habit_list')
 
@@ -102,14 +112,17 @@ def log_habit(request, habit_id):
 def statistics(request):
     habits = Habit.objects.filter(user=request.user)
     stats = []
-    today = timezone.now().date()
+    # usar fecha local para evitar desfases por timezone
+    today = timezone.localdate()
     
     for habit in habits:
-        logs = HabitLog.objects.filter(habit=habit).order_by('date')
+        # considerar solo logs no excluidos para estadísticas de registros/completados
+        logs = HabitLog.objects.filter(habit=habit, excluded=False).order_by('date')
         total_registros = logs.count()
-        
-        # Calcular días desde la creación del hábito
-        dias_desde_creacion = (today - habit.created_at.date()).days + 1
+
+        # Calcular días desde la creación del hábito usando la fecha local del created_at
+        created_date = timezone.localtime(habit.created_at).date()
+        dias_desde_creacion = (today - created_date).days + 1
         
         # Calcular días completados
         if habit.goal_type == 'boolean':
@@ -128,7 +141,7 @@ def statistics(request):
             'completados': completados,
             'tasa_exito': round(tasa_exito, 1),
             'tasa_registro': round(tasa_registro, 1),
-            'current_streak': habit.current_streak(),
+            'current_streak': habit.current_streak,
         })
     
     return render(request, 'habits/statistics.html', {'stats': stats})
@@ -136,7 +149,7 @@ def statistics(request):
 @login_required
 def exclude_day(request, habit_id):
     habit = get_object_or_404(Habit, id=habit_id, user=request.user)
-    today = timezone.now().date()
+    today = timezone.localdate()
     
     if request.method == 'POST':
         # Marcar el log de hoy como excluido
@@ -149,3 +162,97 @@ def exclude_day(request, habit_id):
         messages.success(request, f'Día excluido para {habit.name}. Tu racha se mantiene.')
     
     return redirect('habit_list')
+
+@login_required
+def timer_action(request, habit_id):
+    habit = get_object_or_404(Habit, id=habit_id, user=request.user)
+    
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        action = data.get('action')
+        
+        if action == 'start':
+            # Iniciar temporizador
+            habit.timer_state = 'running'
+            habit.timer_started_at = timezone.now()
+            habit.save()
+            
+            return JsonResponse({
+                'status': 'started',
+                'elapsed': habit.get_current_elapsed_time(),
+                'remaining': habit.get_remaining_time()
+            })
+            
+        elif action == 'pause':
+            # Pausar temporizador
+            if habit.timer_state == 'running' and habit.timer_started_at:
+                current_elapsed = (timezone.now() - habit.timer_started_at).total_seconds()
+                habit.accumulated_time += current_elapsed
+                habit.timer_state = 'paused'
+                habit.timer_started_at = None
+                habit.save()
+            
+            return JsonResponse({
+                'status': 'paused',
+                'elapsed': habit.get_current_elapsed_time(),
+                'remaining': habit.get_remaining_time()
+            })
+            
+        elif action == 'resume':
+            # Reanudar temporizador
+            habit.timer_state = 'running'
+            habit.timer_started_at = timezone.now()
+            habit.save()
+            
+            return JsonResponse({
+                'status': 'resumed',
+                'elapsed': habit.get_current_elapsed_time(),
+                'remaining': habit.get_remaining_time()
+            })
+            
+        elif action == 'stop':
+            # Detener y completar el hábito
+            today = timezone.localdate()
+            elapsed_minutes = habit.get_current_elapsed_time() / 60  # convertir a minutos
+            
+            # Crear registro del hábito
+            log, created = HabitLog.objects.update_or_create(
+                habit=habit,
+                date=today,
+                defaults={'value': elapsed_minutes, 'excluded': False}
+            )
+            
+            # Resetear temporizador
+            habit.timer_state = 'stopped'
+            habit.timer_started_at = None
+            habit.accumulated_time = 0.0
+            habit.save()
+            
+            return JsonResponse({
+                'status': 'completed',
+                'value': elapsed_minutes,
+                'message': f'¡Hábito completado! Tiempo: {elapsed_minutes:.1f} minutos'
+            })
+            
+        elif action == 'reset':
+            # Resetear temporizador
+            habit.timer_state = 'stopped'
+            habit.timer_started_at = None
+            habit.accumulated_time = 0.0
+            habit.save()
+            
+            return JsonResponse({'status': 'reset'})
+    
+    return JsonResponse({'status': 'error', 'message': 'Acción no válida'})
+
+@login_required
+def timer_status(request, habit_id):
+    habit = get_object_or_404(Habit, id=habit_id, user=request.user)
+    
+    return JsonResponse({
+        'state': habit.timer_state,
+        'elapsed': habit.get_current_elapsed_time(),
+        'remaining': habit.get_remaining_time(),
+        'is_complete': habit.is_timer_complete(),
+        'target_minutes': habit.target
+    })
