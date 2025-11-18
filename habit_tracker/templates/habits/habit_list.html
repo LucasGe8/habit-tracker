@@ -11,14 +11,11 @@
     <div class="habit-card {% if habit.today_log and habit.today_log.value >= habit.target and not habit.today_log.excluded %}completed{% endif %} 
                 {% if habit.today_log and habit.today_log.excluded %}excluded{% endif %}" 
          id="habit-{{ habit.id }}">
-        <!-- CABECERA ORIGINAL (como estaba antes) -->
-        <!-- Header: nombre a la izquierda, racha + valor + tiempo a la derecha (UNA LÍNEA) -->
         <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:0.25rem;">
             <h3 style="flex:1 1 auto; margin:0; margin-right:0.75rem; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                 {{ habit.name }}
             </h3>
 
-            <!-- Right cluster: racha (icon + valor coloreado) y tiempo restante, alineados a la derecha -->
             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex:0 0 auto; min-width:0;">
                 <div style="display:flex; align-items:center; gap:6px;">
                     <div class="streak" aria-hidden="true" style="font-size:0.95rem; line-height:1;">🔥</div>
@@ -32,7 +29,7 @@
                     {% if habit.today_log and habit.today_log.excluded %}
                         <span style="color: #6c757d;">⏸️ Día excluido</span>
                     {% elif habit.is_completed_today %}
-                        <span style="color: #28a745;">✅ Hoy</span>
+                        <span style="color: #28a745;">✅ Completado</span>
                     {% else %}
                         {% with habit.hours_until_midnight as time_left %}
                         <span>⏳ {{ time_left.0 }}h {{ time_left.1 }}m</span>
@@ -42,8 +39,6 @@
             </div>
         </div>
         
-        <!-- EL RESTO DEL CÓDIGO SE MANTIENE EXACTAMENTE IGUAL -->
-        <!-- Información del hábito -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap;">
             <span style="font-size: 0.8rem; color: #888; margin-bottom: 0.25rem;">
                 Creado el {{ habit.formatted_created_at }}
@@ -53,7 +48,6 @@
             </span>
         </div>
         
-        <!-- Meta -->
         <div style="margin-bottom: 1rem; font-size: 0.9rem; color: #ccc;">
             {% if habit.goal_type == 'boolean' %}
                 Meta: Completar diariamente
@@ -62,35 +56,22 @@
             {% endif %}
         </div>
         
-        <!-- Controles del hábito -->
         <div style="display: flex; flex-direction: column; gap: 0.5rem;">
             {% if habit.today_log and habit.today_log.excluded %}
-                <!-- Estado: Día excluido -->
                 <div style="text-align: center; padding: 0.75rem; background: #6c757d; color: white; border-radius: 5px;">
                     ⏸️ Día excluido
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
-                    {% if habit.goal_type == 'boolean' %}
-                        <form method="post" action="{% url 'log_habit' habit.id %}" style="flex: 1;">
-                            {% csrf_token %}
-                            <input type="hidden" name="value" value="0">
-                            <button type="submit" class="btn btn-outline" style="width: 100%;">
-                                🔄 Reactivar
-                            </button>
-                        </form>
-                    {% else %}
-                        <form method="post" action="{% url 'log_habit' habit.id %}" style="flex: 1;">
-                            {% csrf_token %}
-                            <input type="hidden" name="value" value="0">
-                            <button type="submit" class="btn btn-outline" style="width: 100%;">
-                                🔄 Reactivar
-                            </button>
-                        </form>
-                    {% endif %}
+                    <form method="post" action="{% url 'log_habit' habit.id %}" style="flex: 1;">
+                        {% csrf_token %}
+                        <input type="hidden" name="value" value="0">
+                        <button type="submit" class="btn btn-outline" style="width: 100%;">
+                            🔄 Reactivar
+                        </button>
+                    </form>
                 </div>
                 
             {% elif habit.today_log and habit.today_log.value >= habit.target and not habit.today_log.excluded %}
-                <!-- Estado: Completado -->
                 <form method="post" action="{% url 'exclude_day' habit.id %}" style="width: 100%;">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline" style="width: 100%; color: #ffffffff;" 
@@ -100,7 +81,6 @@
                 </form>
                 
             {% else %}
-                <!-- Estado: No completado -->
                 {% if habit.goal_type == 'boolean' %}
                     <form method="post" action="{% url 'log_habit' habit.id %}" style="width: 100%;">
                         {% csrf_token %}
@@ -111,7 +91,6 @@
                     </form>
                     
                 {% elif habit.goal_type == 'numeric' %}
-                    <!-- Sistema numérico optimizado -->
                     <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; background: #2a2a2a; border-radius: 8px; padding: 0.5rem;">
                             <button type="button" class="btn btn-outline decrement-btn" 
@@ -139,11 +118,8 @@
                             style="width: 100%; display: none;">💾 Guardar Cambios</button>
                     
                 {% elif habit.goal_type == 'time' %}
-                    <!-- NUEVO DISEÑO: Temporizador optimizado para móviles -->
                     <div class="timer-container">
-                        <!-- Display compacto del temporizador -->
                         <div class="timer-display-compact" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
-                            <!-- Añadimos la clase 'timer-display' para que el JS inicialice correctamente -->
                             <div id="timer-display-{{ habit.id }}" class="timer-display timer-time" 
                                  style="font-size: 1.8rem; font-weight: bold; font-family: monospace; text-align: center; display:block;">
                                 {{ habit.formatted_target_time }}
@@ -153,14 +129,12 @@
                             </div>
                         </div>
                         
-                        <!-- Barra de progreso compacta -->
                         <div style="background: #333; border-radius: 10px; height: 6px; margin: 0.5rem 0; overflow: hidden;">
                             <div id="timer-progress-{{ habit.id }}" class="timer-progress-bar" 
                                  style="height: 100%; background: #007bff; width: 0%; transition: width 0.3s ease;">
                             </div>
                         </div>
                         
-                        <!-- Botones de control optimizados -->
                         <div class="timer-controls-compact">
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
                                 <button type="button" class="btn timer-start-btn" 
@@ -195,7 +169,6 @@
                             </button>
                         </div>
                         
-                        <!-- Estado del temporizador -->
                         <div id="timer-status-{{ habit.id }}" style="text-align: center; margin-top: 0.5rem; font-size: 0.8rem; color: #888;">
                             {% if habit.timer_state == 'running' %}
                                 ⏱️ En progreso...
@@ -209,7 +182,6 @@
                 {% endif %}
             {% endif %}
             
-            <!-- Botones de acción compactos -->
             <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
                 <a href="{% url 'habit_edit' habit.id %}" class="btn btn-outline" style="flex: 1; padding: 0.5rem; text-align: center;">
                     ✏️ Editar
@@ -221,7 +193,6 @@
             </div>
         </div>
         
-        <!-- Barras de progreso para hábitos numéricos -->
         {% if habit.goal_type == 'numeric' and not habit.today_log.excluded %}
         <div style="margin-top: 0.5rem; background: #333; border-radius: 4px; height: 6px; overflow: hidden;">
             <div id="progress-{{ habit.id }}" class="progress-bar" 
@@ -240,16 +211,14 @@
     </div>
     {% endfor %}
 </div>
-<!-- Estilos optimizados para móviles - VERSIÓN CORREGIDA -->
+
 <style>
-/* Contenedor principal responsivo */
 .habit-grid {
     display: grid;
     gap: 1rem;
     grid-template-columns: 1fr;
 }
 
-/* Mejoras para móviles */
 @media (max-width: 768px) {
     .container {
         padding: 10px;
@@ -258,11 +227,9 @@
     .habit-card {
         padding: 1rem;
         margin-bottom: 1rem;
-        /* allow children to shrink so long controls don't push header */
         min-width: 0;
     }
     
-    /* Mantener la cabecera en una sola línea en móvil: nombre a izquierda, info a la derecha */
     .habit-card > div:first-child {
         display: flex !important;
         flex-direction: row !important;
@@ -276,13 +243,12 @@
         margin-right: 0;
         margin-bottom: 0.5rem;
         font-size: 1.2rem;
-        min-width: 0; /* important so title can shrink */
+        min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
     
-    /* Temporizador optimizado para móviles */
     .timer-container {
         padding: 0.75rem;
         background: #2a2a2a;
@@ -301,7 +267,6 @@
     .timer-time {
         font-size: 1.6rem !important;
         margin-bottom: 0.25rem;
-        /* permitir que el timer ocupe el ancho necesario pero sin romper el layout */
         max-width: 100%;
         width: auto;
         overflow: visible;
@@ -310,7 +275,6 @@
         display: inline-block;
     }
     
-    /* Controles: evitar que ocupen más ancho del disponible */
     .timer-controls-compact { display:flex; gap:0.4rem; flex-wrap:wrap; justify-content:center; }
     .timer-controls-compact .btn {
         padding: 0.45rem 0.5rem;
@@ -318,7 +282,7 @@
         min-width: 44px;
         flex: 0 0 auto;
     }
-    /* make action buttons compact and allow them to share space */
+    
     .habit-card .btn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     
     .timer-controls-compact .btn {
@@ -326,30 +290,12 @@
         font-size: 0.9rem;
     }
     
-    /* Botones de acción más compactos */
     .btn {
         padding: 0.75rem 0.5rem;
         font-size: 0.9rem;
     }
-    
-    /* ELIMINADO: Reglas problemáticas que afectaban la navegación global */
-    /* .nav {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-    
-    .nav-links {
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-    
-    .user-info {
-        flex-direction: column;
-        text-align: center;
-    } */
 }
 
-/* Mejoras para tablets */
 @media (min-width: 769px) and (max-width: 1024px) {
     .habit-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -361,7 +307,6 @@
     }
 }
 
-/* Estilos para el temporizador en progreso */
 .timer-running .timer-time {
     animation: pulse 2s infinite;
     color: #007bff !important;
@@ -373,7 +318,6 @@
     100% { opacity: 1; }
 }
 
-/* Estados de color para el temporizador */
 .timer-complete .timer-time {
     color: #28a745 !important;
 }
@@ -382,13 +326,11 @@
     color: #ffc107 !important;
 }
 
-/* Efectos hover para botones */
 .btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* Mejoras visuales para las tarjetas */
 .habit-card {
     transition: all 0.3s ease;
     border: 1px solid #333;
@@ -399,9 +341,7 @@
     box-shadow: 0 4px 12px rgba(0, 123, 255, 0.1);
 }
 
-/* Tarjeta completada: degradado sutil verde -> card normal (menos agresivo) */
 .habit-card.completed {
-    /* reforzar ligeramente el degradado verde manteniendo sutileza */
     background: linear-gradient(135deg,
                 rgba(40,167,69,0.14) 0%,
                 rgba(40,167,69,0.06) 30%,
@@ -411,11 +351,10 @@
     box-shadow: 0 6px 12px rgba(40,167,69,0.10);
 }
 
-.habit-card.completed h3 { color: #e9f6ec; } /* título ligeramente aclarado */
-.habit-card.completed .streak { color: #ffd700; } /* mantener color del icono/valor */
+.habit-card.completed h3 { color: #e9f6ec; }
+.habit-card.completed .streak { color: #ffd700; }
 .habit-card.completed .habit-value { color: #e6f9e9 !important; }
 
-/* NUEVO: Tarjeta NO completada — sutil degradado rojo -> card normal */
 .habit-card:not(.completed) {
     background: linear-gradient(135deg,
                 rgba(220,53,69,0.12) 0%,
@@ -426,11 +365,10 @@
     box-shadow: 0 6px 10px rgba(220,53,69,0.06);
 }
 
-/* Accentos rojos en tarjetas no completadas (racha / valores) */
 .habit-card:not(.completed) .streak { color: #ff6b6b; }
 .habit-card:not(.completed) .habit-value { color: #ff6b6b !important; }
 </style>
-<!-- Script para el sistema de temporizador -->
+
 <script>
 class TimerManager {
     constructor() {
@@ -444,7 +382,6 @@ class TimerManager {
     }
 
     startTimerUpdates(habitId) {
-        // Actualizar estado cada segundo
         this.updateTimerStatus(habitId);
         const interval = setInterval(() => {
             this.updateTimerStatus(habitId);
@@ -478,19 +415,16 @@ class TimerManager {
         if (!display) return;
 
         if (data) {
-            // Actualizar display del tiempo
             const remainingSeconds = data.remaining;
             const minutes = Math.floor(remainingSeconds / 60);
             const seconds = Math.floor(remainingSeconds % 60);
             display.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-            // Actualizar barra de progreso
             const targetSeconds = data.target_minutes * 60;
             const progressPercent = ((targetSeconds - remainingSeconds) / targetSeconds) * 100;
             if (progressBar) {
                 progressBar.style.width = `${progressPercent}%`;
                 
-                // Cambiar color según el progreso
                 if (progressPercent >= 100) {
                     progressBar.style.background = '#28a745';
                     display.style.color = '#28a745';
@@ -506,7 +440,6 @@ class TimerManager {
                 }
             }
 
-            // Actualizar estado y botones
             this.updateTimerUI(habitId, data.state);
             
             if (statusElement) {
@@ -522,7 +455,6 @@ class TimerManager {
                 }
             }
 
-            // Completar automáticamente si se alcanza el tiempo
             if (data.is_complete && data.state === 'running') {
                 this.completeTimer(habitId);
             }
@@ -553,7 +485,6 @@ class TimerManager {
             const data = await response.json();
             
             if (action === 'stop' && data.status === 'completed') {
-                // Recargar la página después de completar
                 setTimeout(() => {
                     location.reload();
                 }, 1500);
@@ -596,18 +527,14 @@ class TimerManager {
     }
 }
 
-// Inicializar el manager de temporizadores
 const timerManager = new TimerManager();
 
-// Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar todos los temporizadores de hábitos de tiempo
     document.querySelectorAll('.timer-display').forEach(display => {
         const habitId = display.id.split('-')[2];
         timerManager.initTimer(habitId);
     });
     
-    // Event listeners para botones de temporizador
     document.querySelectorAll('.timer-start-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const habitId = this.getAttribute('data-habit-id');
@@ -642,11 +569,8 @@ document.addEventListener('DOMContentLoaded', function() {
             timerManager.resetTimer(habitId);
         });
     });
-    
-    // ... (el resto de tus scripts existentes)
 });
 
-// Función para confirmar eliminación (existente)
 function confirmDelete(habitId, habitName) {
     if (confirm(`¿Estás seguro de que quieres eliminar el hábito "${habitName}"? Esta acción no se puede deshacer.`)) {
         const form = document.createElement('form');
@@ -666,13 +590,10 @@ function confirmDelete(habitId, habitName) {
 }
 </script>
 
-<!-- Scripts existentes para temporizadores individuales y sistema numérico -->
 <script>
-// Variables globales para almacenar valores temporales y timeouts por hábito
 const habitValues = {};
 const saveTimeouts = {};
 
-// Seguridad en timers individuales
 function updateIndividualTimers() {
     const now = new Date();
     const tomorrow = new Date(now);
@@ -698,7 +619,6 @@ function updateIndividualTimers() {
 }
 
 function initializeNumericHabits() {
-    // Inicializar valores y leer target desde data-attributes (si están)
     document.querySelectorAll('.habit-value').forEach(element => {
         const habitId = element.id.split('-')[1];
         habitValues[habitId] = parseFloat(element.textContent) || 0;
@@ -731,7 +651,6 @@ function incrementValue(habitId) {
     if (!habitValues.hasOwnProperty(habitId)) return;
     habitValues[habitId]++;
     updateDisplay(habitId);
-    // Auto-guardar por hábito
     clearTimeout(saveTimeouts[habitId]);
     saveTimeouts[habitId] = setTimeout(() => saveValue(habitId), 1000);
 }
@@ -826,27 +745,6 @@ function showMessage(message, type) {
     messageDiv.textContent = message;
     document.body.appendChild(messageDiv);
     setTimeout(() => messageDiv.remove(), 3000);
-}
-
-function confirmDelete(habitId, habitName) {
-    if (confirm(`¿Estás seguro de que quieres eliminar el hábito "${habitName}"? Esta acción no se puede deshacer.`)) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/habit/${habitId}/delete/`;
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrfmiddlewaretoken';
-        csrfInput.value = csrfToken;
-        form.appendChild(csrfInput);
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
-
-// NUEVO: Función para confirmar exclusión
-function confirmExclude(habitId, streak) {
-    return confirm(`¿Excluir hoy sin afectar tu racha de ${streak} días?\n\nEl día se marcará como excluido y no afectará tu racha.`);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
