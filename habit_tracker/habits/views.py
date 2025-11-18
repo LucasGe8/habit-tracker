@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.utils import timezone
 from django.contrib import messages
+from zoneinfo import ZoneInfo
+from datetime import datetime, time
 from .models import Habit, HabitLog
 from .forms import HabitForm, UserRegisterForm
 from django.http import JsonResponse
@@ -110,38 +112,44 @@ def log_habit(request, habit_id):
 
 @login_required
 def statistics(request):
-    habits = Habit.objects.filter(user=request.user)
     stats = []
-    # usar fecha local para evitar desfases por timezone
     today = timezone.localdate()
     
-    for habit in habits:
-        # considerar solo logs no excluidos para estadísticas de registros/completados
-        logs = HabitLog.objects.filter(habit=habit, excluded=False).order_by('date')
-        total_registros = logs.count()
-
-        # Calcular días desde la creación del hábito usando la fecha local del created_at
-        created_date = timezone.localtime(habit.created_at).date()
+    for h in Habit.objects.filter(user=request.user).order_by('name'):
+        # Obtener la fecha de creación en la zona horaria local
+        created_date = timezone.localtime(h.created_at).date()
+        
+        # Calcular días desde la creación (sin incluir días futuros)
         dias_desde_creacion = (today - created_date).days + 1
+        if dias_desde_creacion < 1:
+            dias_desde_creacion = 1  # Mínimo 1 día
+            
+        # Contar registros únicos HASTA HOY (excluir futuros)
+        logs = HabitLog.objects.filter(habit=h, date__lte=today)  # ¡FILTRO IMPORTANTE!
+        total_registros = logs.values('date').distinct().count()
         
-        # Calcular días completados
-        if habit.goal_type == 'boolean':
-            completados = logs.filter(value__gte=1).count()
+        # Calcular días completados (solo hasta hoy)
+        if h.goal_type == 'boolean':
+            completados = logs.filter(value__gte=1, excluded=False).count()
         else:
-            completados = logs.filter(value__gte=habit.target).count()
+            completados = logs.filter(value__gte=h.target, excluded=False).count()
         
-        # Calcular tasas
+        # Calcular tasas con protección contra división por cero
         tasa_exito = (completados / total_registros * 100) if total_registros > 0 else 0
         tasa_registro = (total_registros / dias_desde_creacion * 100) if dias_desde_creacion > 0 else 0
         
+        # Limitar la tasa máxima al 100%
+        tasa_exito = min(tasa_exito, 100)
+        tasa_registro = min(tasa_registro, 100)
+        
         stats.append({
-            'habit': habit,
+            'habit': h,
             'dias_desde_creacion': dias_desde_creacion,
             'total_registros': total_registros,
             'completados': completados,
             'tasa_exito': round(tasa_exito, 1),
             'tasa_registro': round(tasa_registro, 1),
-            'current_streak': habit.current_streak,
+            'current_streak': h.current_streak,
         })
     
     return render(request, 'habits/statistics.html', {'stats': stats})
